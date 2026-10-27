@@ -1,9 +1,9 @@
 {% import '_includes/forms' as forms %}
 
-{% set overrides = craft.app.config.getConfigFromFile('canary')|keys %}
+{% set overrides = craft.app.config.getConfigFromFile('site-canary')|keys %}
 {% macro overrideWarning(key, overrides) %}
     {%- if key in overrides -%}
-        {{ 'This is being overridden by the `{setting}` setting in `config/canary.php`.'|t('app', { setting: key })|md(inlineOnly=true) }}
+        {{ 'This is being overridden by the `{setting}` setting in `config/site-canary.php`.'|t('app', { setting: key })|md(inlineOnly=true) }}
     {%- endif -%}
 {% endmacro %}
 
@@ -81,7 +81,7 @@
         Rebuild the baseline after every deployment, so legitimate changes aren’t reported as issues.
         Add this as the last step of your deploy script:
     </p>
-    <p><code>php craft canary/scan --baseline</code></p>
+    <p><code>php craft site-canary/scan --baseline</code></p>
 
     <p class="light">
         A baseline date you don’t recognize is a warning sign in itself: someone with access to the server may have rebuilt it to hide their changes.
@@ -90,8 +90,8 @@
 
 <p class="light">
     Schedule the scan with cron, e.g. daily at 6am:
-    <code>0 6 * * * cd /path/to/project &amp;&amp; /usr/bin/php craft canary/scan</code>.
-    You can also run it now from <a href="{{ cpUrl('utilities/canary') }}">Utilities → Canary</a>.
+    <code>0 6 * * * cd /path/to/project &amp;&amp; /usr/bin/php craft site-canary/scan</code>.
+    You can also run it now from <a href="{{ cpUrl('utilities/site-canary') }}">Utilities → Site Canary</a>.
 </p>
 
 <hr>

@@ -2,7 +2,7 @@
 /**
  * Canary config.
  *
- * Copy this file to your project's config/ folder as canary.php. Anything set
+ * Copy this file to your project's config/ folder as site-canary.php. Anything set
  * here overrides the plugin settings in the control panel. Multi-environment
  * arrays ('*' => [...], 'production' => [...]) are supported.
  */

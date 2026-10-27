@@ -41,7 +41,7 @@ class Scanner extends Component
         $baseline = $plugin->integrity->getBaseline();
 
         if (!$baseline) {
-            $result['error'] = 'No baseline file found. Run: php craft canary/scan --baseline';
+            $result['error'] = 'No baseline file found. Run: php craft site-canary/scan --baseline';
             Craft::error($result['error'], 'canary');
 
             return $result;

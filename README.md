@@ -1,4 +1,4 @@
-# Canary for Craft CMS
+# Site Canary for Craft CMS
 
 Daily file integrity and server health checks for Craft CMS 5, with an emailed report.
 
@@ -16,7 +16,7 @@ By default a report goes out every day, including an "all clear" when nothing is
 
 ```bash
 composer require dgrigg/craft-canary
-php craft plugin/install canary
+php craft plugin/install site-canary
 ```
 
 Add the report recipient to `.env` (comma-separate multiple addresses):
@@ -28,21 +28,21 @@ CANARY_ALERT_EMAIL=you@example.com
 ## Usage
 
 ```bash
-php craft canary/scan --baseline   # Generate a new baseline (run after deployments)
-php craft canary/scan              # Run the check and email the report
-php craft canary/scan --dry-run    # Show results without sending email
+php craft site-canary/scan --baseline   # Generate a new baseline (run after deployments)
+php craft site-canary/scan              # Run the check and email the report
+php craft site-canary/scan --dry-run    # Show results without sending email
 ```
 
 The command exits non-zero when issues are found, so it can also gate a CI step or a monitoring check.
 
-You can also run a scan from the control panel under **Utilities → Canary**. It shows the results on the page and emails the report, even when the daily "all clear" is turned off. Access is controlled by the **Utilities → Canary** user permission. The utility can also rebuild the baseline. That asks for the user's password first and is logged with their username, because a rebuild accepts every file as it currently is.
+You can also run a scan from the control panel under **Utilities → Site Canary**. It shows the results on the page and emails the report, even when the daily "all clear" is turned off. Access is controlled by the **Utilities → Site Canary** user permission. The utility can also rebuild the baseline. That asks for the user's password first and is logged with their username, because a rebuild accepts every file as it currently is.
 
 ### 1. Rebuild the baseline on every deploy
 
 Add this as the last step of your deploy script or CI pipeline, after `composer install` and `php craft up`:
 
 ```bash
-php craft canary/scan --baseline
+php craft site-canary/scan --baseline
 ```
 
 Without this, every legitimate deploy shows up as modified files in the next report.
@@ -59,7 +59,7 @@ Then add a line that runs the scan once a day:
 
 ```
 # Canary: daily integrity and health check at 6:00 server time
-0 6 * * * cd /var/www/example.com && /usr/bin/php craft canary/scan > /dev/null 2>&1
+0 6 * * * cd /var/www/example.com && /usr/bin/php craft site-canary/scan > /dev/null 2>&1
 ```
 
 Adjust it for your server:
@@ -72,7 +72,7 @@ Adjust it for your server:
 To confirm the entry works, run the same command by hand as that user with `--dry-run`:
 
 ```bash
-cd /var/www/example.com && /usr/bin/php craft canary/scan --dry-run
+cd /var/www/example.com && /usr/bin/php craft site-canary/scan --dry-run
 ```
 
 Runs are locked with Craft's mutex, so overlapping runs are skipped. The crontab check (below) inspects this same user's crontab by default, and the scan's own entry is allowed because it contains `craft`.
@@ -106,11 +106,11 @@ SHA-256 of every file matching the extensions (`php`, `twig`) under the scan pat
 
 Checks whose tools aren't installed (`ss`, `redis-cli`, `crontab`) are skipped quietly. Turn the whole group off with `enableSystemChecks` for shared hosting or non-Linux servers.
 
-The crontab check reads the crontab of the system account the scan runs as, or of `cronUser` when one is set (which usually requires root). If that crontab exists but can't be read, the scan reports it as an issue rather than passing. A scan run from **Utilities → Canary** runs as the web server's PHP user, which is often a different account from the one cron uses. If that makes the check unreliable on your server, turn it off with `enableCrontabCheck` and keep the other system checks.
+The crontab check reads the crontab of the system account the scan runs as, or of `cronUser` when one is set (which usually requires root). If that crontab exists but can't be read, the scan reports it as an issue rather than passing. A scan run from **Utilities → Site Canary** runs as the web server's PHP user, which is often a different account from the one cron uses. If that makes the check unreliable on your server, turn it off with `enableCrontabCheck` and keep the other system checks.
 
 ## Configuration
 
-Settings are under **Settings → Plugins → Canary**. To manage them in code, copy `vendor/dgrigg/craft-canary/src/config.php` to `config/canary.php`; values there override the control panel and can vary by environment:
+Settings are under **Settings → Plugins → Site Canary**. To manage them in code, copy `vendor/dgrigg/craft-canary/src/config.php` to `config/site-canary.php`; values there override the control panel and can vary by environment:
 
 ```php
 return [

@@ -6,7 +6,7 @@ use craft\base\Model;
 use craft\helpers\App;
 
 /**
- * Canary settings. Every value can also be set in config/canary.php,
+ * Canary settings. Every value can also be set in config/site-canary.php,
  * which takes precedence over the control panel.
  */
 class Settings extends Model

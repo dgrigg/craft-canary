@@ -39,11 +39,11 @@ class Reports extends Component
             ?: Craft::$app->getSystemName();
 
         if ($result['error']) {
-            $subject = "[SECURITY] Canary Error - {$domain}";
+            $subject = "[SECURITY] Site Canary Error - {$domain}";
         } elseif ($issueCount > 0) {
-            $subject = "[SECURITY ALERT] Canary Found {$issueCount} Issue" . ($issueCount === 1 ? '' : 's') . " - {$domain}";
+            $subject = "[SECURITY ALERT] Site Canary Found {$issueCount} Issue" . ($issueCount === 1 ? '' : 's') . " - {$domain}";
         } else {
-            $subject = "[Security] Daily Canary Report - {$domain}";
+            $subject = "[Security] Daily Site Canary Report - {$domain}";
         }
 
         $variables = [
@@ -56,8 +56,8 @@ class Reports extends Component
         ];
 
         $view = Craft::$app->getView();
-        $html = $view->renderTemplate('canary/_emails/report', $variables, View::TEMPLATE_MODE_CP);
-        $text = $view->renderTemplate('canary/_emails/report.txt', $variables, View::TEMPLATE_MODE_CP);
+        $html = $view->renderTemplate('site-canary/_emails/report', $variables, View::TEMPLATE_MODE_CP);
+        $text = $view->renderTemplate('site-canary/_emails/report.txt', $variables, View::TEMPLATE_MODE_CP);
 
         $sent = Craft::$app->getMailer()->compose()
             ->setTo($recipients)

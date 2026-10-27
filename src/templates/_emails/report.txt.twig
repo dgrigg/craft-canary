@@ -1,13 +1,13 @@
 {%- set dateFormat = 'M j, Y g:i A T' -%}
 {%- autoescape false -%}
 {% if result.error -%}
-CANARY CHECK ERROR
+SITE CANARY CHECK ERROR
 
 An error occurred during the file integrity check.
 
 Error: {{ result.error }}
 {% elseif issueCount -%}
-CANARY ALERT
+SITE CANARY ALERT
 
 Unauthorized changes have been detected on your server.
 
@@ -31,9 +31,9 @@ Action required: investigate these changes immediately.
 
 If the changes are legitimate (after a deployment), run:
 
-  php craft canary/scan --baseline
+  php craft site-canary/scan --baseline
 {% else -%}
-DAILY CANARY REPORT
+DAILY SITE CANARY REPORT
 
 Status: All clear
 
@@ -48,5 +48,5 @@ Checked: {{ result.checkedAt|date(dateFormat) }}
 {% endif %}
 Files monitored: {{ result.fileCount }}
 
-{{ systemName }} · Canary
+{{ systemName }} · Site Canary
 {%- endautoescape %}

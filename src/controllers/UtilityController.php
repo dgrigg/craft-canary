@@ -10,7 +10,7 @@ use dgrigg\canary\Canary;
 use dgrigg\canary\services\Scanner;
 
 /**
- * Runs a scan from Utilities → Canary.
+ * Runs a scan from Utilities → Site Canary.
  */
 class UtilityController extends Controller
 {
@@ -18,7 +18,7 @@ class UtilityController extends Controller
     {
         $this->requirePostRequest();
         $this->requireAcceptsJson();
-        $this->requirePermission('utility:canary');
+        $this->requirePermission('utility:site-canary');
 
         $mutex = Craft::$app->getMutex();
         $lockName = 'canary-scan';
@@ -45,7 +45,7 @@ class UtilityController extends Controller
             Craft::error('Report email failed: ' . $emailError, 'canary');
         }
 
-        $html = $this->getView()->renderTemplate('canary/_utility/results', [
+        $html = $this->getView()->renderTemplate('site-canary/_utility/results', [
             'result' => $result,
             'issueCount' => $issueCount,
             'systemChecks' => Canary::$plugin->getSettings()->enableSystemChecks,
@@ -76,7 +76,7 @@ class UtilityController extends Controller
     {
         $this->requirePostRequest();
         $this->requireAcceptsJson();
-        $this->requirePermission('utility:canary');
+        $this->requirePermission('utility:site-canary');
         $this->requireElevatedSession();
 
         $mutex = Craft::$app->getMutex();
@@ -97,7 +97,7 @@ class UtilityController extends Controller
 
         return $this->asJson([
             'message' => "Baseline rebuilt with {$baseline['file_count']} files.",
-            'baselineHtml' => $this->getView()->renderTemplate('canary/_utility/baseline', [
+            'baselineHtml' => $this->getView()->renderTemplate('site-canary/_utility/baseline', [
                 'baseline' => Canary::$plugin->integrity->getBaselineInfo(),
             ]),
         ]);

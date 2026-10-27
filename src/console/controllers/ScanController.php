@@ -13,9 +13,9 @@ use dgrigg\canary\services\Scanner;
 /**
  * Check monitored files for unauthorized modifications, additions, or deletions.
  *
- *   php craft canary/scan              Run the check and email the report
- *   php craft canary/scan --baseline   Generate a new baseline (run after deployments)
- *   php craft canary/scan --dry-run    Show results without sending email
+ *   php craft site-canary/scan              Run the check and email the report
+ *   php craft site-canary/scan --baseline   Generate a new baseline (run after deployments)
+ *   php craft site-canary/scan --dry-run    Show results without sending email
  */
 class ScanController extends Controller
 {

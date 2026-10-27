@@ -5,7 +5,7 @@
     </p>
 
     <div id="canary-baseline">
-        {% include 'canary/_utility/baseline' %}
+        {% include 'site-canary/_utility/baseline' %}
     </div>
 
     {% if recipients %}
@@ -66,7 +66,7 @@
             return;
         }
 
-        const data = await send(runButton, 'canary/utility/scan');
+        const data = await send(runButton, 'site-canary/utility/scan');
 
         if (data) {
             results.innerHTML = data.html;
@@ -80,7 +80,7 @@
         }
 
         Craft.elevatedSessionManager.requireElevatedSession(async () => {
-            const data = await send(rebuildButton, 'canary/utility/rebuild-baseline');
+            const data = await send(rebuildButton, 'site-canary/utility/rebuild-baseline');
 
             if (data) {
                 baseline.innerHTML = data.baselineHtml;

@@ -19,7 +19,7 @@ use dgrigg\canary\services\SystemHealth;
 use dgrigg\canary\utilities\CanaryUtility;
 
 /**
- * Canary plugin for Craft CMS
+ * Site Canary plugin for Craft CMS
  *
  * Daily file integrity and server health checks, with an emailed report.
  *
@@ -68,7 +68,7 @@ class Canary extends Plugin
             'allowLineBreaks' => true,
         ]);
 
-        // Utilities → Canary: run a scan from the control panel
+        // Utilities → Site Canary: run a scan from the control panel
         Event::on(Utilities::class, Utilities::EVENT_REGISTER_UTILITIES, function(RegisterComponentTypesEvent $event) {
             $event->types[] = CanaryUtility::class;
         });
@@ -81,7 +81,7 @@ class Canary extends Plugin
 
     protected function settingsHtml(): ?string
     {
-        return Craft::$app->getView()->renderTemplate('canary/settings', [
+        return Craft::$app->getView()->renderTemplate('site-canary/settings', [
             'settings' => $this->getSettings(),
             'baseline' => $this->integrity->getBaselineInfo(),
         ]);

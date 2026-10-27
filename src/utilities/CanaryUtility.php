@@ -8,18 +8,18 @@ use craft\base\Utility;
 use dgrigg\canary\Canary;
 
 /**
- * Utilities → Canary: run a scan from the control panel.
+ * Utilities → Site Canary: run a scan from the control panel.
  */
 class CanaryUtility extends Utility
 {
     public static function displayName(): string
     {
-        return 'Canary';
+        return 'Site Canary';
     }
 
     public static function id(): string
     {
-        return 'canary';
+        return 'site-canary';
     }
 
     public static function icon(): ?string
@@ -31,7 +31,7 @@ class CanaryUtility extends Utility
     {
         $plugin = Canary::$plugin;
 
-        return Craft::$app->getView()->renderTemplate('canary/_utility/index', [
+        return Craft::$app->getView()->renderTemplate('site-canary/_utility/index', [
             'baseline' => $plugin->integrity->getBaselineInfo(),
             'recipients' => $plugin->getSettings()->getAlertEmails(),
             'systemChecks' => $plugin->getSettings()->enableSystemChecks,
