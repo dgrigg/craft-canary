@@ -1,5 +1,9 @@
 # Release Notes for Site Canary
 
+## 1.0.2 - 2026-10-27
+
+- Updated `LICENSE.md` to the current Craft License text.
+
 ## 1.0.1 - 2026-10-27
 
 - Renamed the plugin to Site Canary, with the handle `site-canary`. Console commands are now `php craft site-canary/scan`, the config file is `config/site-canary.php`, and the utility is under Utilities → Site Canary.
