@@ -1,5 +1,9 @@
 # Release Notes for Site Canary
 
+## 1.0.3 - 2026-10-27
+
+- Scan notices and "already running" messages now use the Site Canary name.
+
 ## 1.0.2 - 2026-10-27
 
 - Updated `LICENSE.md` to the current Craft License text.

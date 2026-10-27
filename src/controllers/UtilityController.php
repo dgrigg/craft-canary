@@ -24,7 +24,7 @@ class UtilityController extends Controller
         $lockName = 'canary-scan';
 
         if (!$mutex->acquire($lockName)) {
-            return $this->asFailure('Another Canary scan is already running.');
+            return $this->asFailure('Another Site Canary scan is already running.');
         }
 
         try {
@@ -56,7 +56,7 @@ class UtilityController extends Controller
         if ($result['error']) {
             $message = 'Scan failed.';
         } elseif ($issueCount > 0) {
-            $message = "Canary found {$issueCount} issue" . ($issueCount === 1 ? '' : 's') . '.';
+            $message = "Site Canary found {$issueCount} issue" . ($issueCount === 1 ? '' : 's') . '.';
         } else {
             $message = 'All clear.';
         }
@@ -83,7 +83,7 @@ class UtilityController extends Controller
         $lockName = 'canary-scan';
 
         if (!$mutex->acquire($lockName)) {
-            return $this->asFailure('A Canary scan is running. Try again when it finishes.');
+            return $this->asFailure('A Site Canary scan is running. Try again when it finishes.');
         }
 
         try {

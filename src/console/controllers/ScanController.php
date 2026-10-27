@@ -42,7 +42,7 @@ class ScanController extends Controller
         $lockName = 'canary-scan';
 
         if (!$mutex->acquire($lockName)) {
-            $this->stderr("Another Canary scan is already running.\n", Console::FG_YELLOW);
+            $this->stderr("Another Site Canary scan is already running.\n", Console::FG_YELLOW);
             return ExitCode::TEMPFAIL;
         }
 
