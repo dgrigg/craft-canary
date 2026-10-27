@@ -1,0 +1,59 @@
+<hr>
+
+{% if result.error %}
+    <p class="error has-icon">
+        <span class="icon" aria-hidden="true"></span>
+        {{ result.error }}
+    </p>
+{% elseif issueCount %}
+    <h2 class="error">{{ issueCount }} issue{{ issueCount == 1 ? '' : 's' }} found</h2>
+
+    {% for heading, items in {
+        'New files (potential threat)': result.added,
+        'Modified files': result.modified,
+        'Deleted files': result.deleted,
+        'System health alerts': result.system,
+    } %}
+        {% if items|length %}
+            <h3>{{ heading }} ({{ items|length }})</h3>
+            <ul class="bullets">
+                {% for item in items %}
+                    <li><code>{{ item }}</code></li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+    {% endfor %}
+
+    <p>
+        If these changes came from a deployment, rebuild the baseline with <code>php craft canary/scan --baseline</code>.
+        Otherwise, investigate them now.
+    </p>
+{% else %}
+    <p class="success has-icon">
+        <span class="icon" aria-hidden="true"></span>
+        All clear: all {{ result.fileCount|number }} files match the baseline{{ systemChecks ? ' and all system health checks passed' }}.
+    </p>
+{% endif %}
+
+<p class="light">
+    Checked {{ result.checkedAt|datetime('short') }}
+    {%- if result.baselineDate %} against the baseline from {{ result.baselineDate|datetime('short') }}{% endif %}.
+    Details are in <code>storage/logs/canary-*.log</code>.
+</p>
+
+{% if emailError %}
+    <p class="error has-icon">
+        <span class="icon" aria-hidden="true"></span>
+        The report email failed: {{ emailError }}
+    </p>
+{% elseif recipients %}
+    <p class="success has-icon">
+        <span class="icon" aria-hidden="true"></span>
+        Report emailed to {{ recipients|join(', ') }}.
+    </p>
+{% else %}
+    <p class="warning has-icon">
+        <span class="icon" aria-hidden="true"></span>
+        No email sent: no report recipients are configured.
+    </p>
+{% endif %}

@@ -1,0 +1,10 @@
+{% if baseline %}
+    <p class="light">
+        Baseline: {{ baseline.fileCount|number }} files, generated {{ baseline.generatedAt|datetime('short') }}.
+    </p>
+{% else %}
+    <p class="warning has-icon">
+        <span class="icon" aria-hidden="true"></span>
+        No baseline yet. Rebuild it below, or run <code>php craft canary/scan --baseline</code> on the server, after a clean deployment.
+    </p>
+{% endif %}

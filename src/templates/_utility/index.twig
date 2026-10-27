@@ -1,0 +1,93 @@
+<div class="readable">
+    <p>
+        Compare the project's PHP and Twig files against the deployment baseline{{ systemChecks ? ' and run the server health checks' }}.
+        The report is emailed just like the daily scheduled run.
+    </p>
+
+    <div id="canary-baseline">
+        {% include 'canary/_utility/baseline' %}
+    </div>
+
+    {% if recipients %}
+        <p class="light">Report goes to: {{ recipients|join(', ') }}</p>
+    {% else %}
+        <p class="warning has-icon">
+            <span class="icon" aria-hidden="true"></span>
+            No report recipients configured, so no email will be sent. Set <code>CANARY_ALERT_EMAIL</code> in <code>.env</code>.
+        </p>
+    {% endif %}
+</div>
+
+<div class="buttons">
+    <button type="button" id="canary-run" class="btn submit">
+        <div class="label">Run scan and send report</div>
+        <div class="spinner spinner-absolute"></div>
+    </button>
+    <button type="button" id="canary-rebuild" class="btn">
+        <div class="label">Rebuild baseline</div>
+        <div class="spinner spinner-absolute"></div>
+    </button>
+</div>
+
+<p class="light readable">
+    Rebuild the baseline only after a deployment you trust: it accepts every file as it is now, so any unauthorized change already on the server stops being reported.
+    You'll be asked for your password first.
+</p>
+
+<div id="canary-results" class="readable" aria-live="polite"></div>
+
+{% js %}
+(() => {
+    const runButton = document.getElementById('canary-run');
+    const rebuildButton = document.getElementById('canary-rebuild');
+    const baseline = document.getElementById('canary-baseline');
+    const results = document.getElementById('canary-results');
+
+    const busy = () => runButton.classList.contains('loading') || rebuildButton.classList.contains('loading');
+
+    const send = async (button, action) => {
+        button.classList.add('loading');
+        button.setAttribute('aria-busy', 'true');
+
+        try {
+            const {data} = await Craft.sendActionRequest('POST', action);
+            return data;
+        } catch (e) {
+            Craft.cp.displayError(e?.response?.data?.message ?? 'The request could not be completed.');
+            return null;
+        } finally {
+            button.classList.remove('loading');
+            button.removeAttribute('aria-busy');
+        }
+    };
+
+    runButton.addEventListener('click', async () => {
+        if (busy()) {
+            return;
+        }
+
+        const data = await send(runButton, 'canary/utility/scan');
+
+        if (data) {
+            results.innerHTML = data.html;
+            data.clean ? Craft.cp.displaySuccess(data.message) : Craft.cp.displayError(data.message);
+        }
+    });
+
+    rebuildButton.addEventListener('click', () => {
+        if (busy()) {
+            return;
+        }
+
+        Craft.elevatedSessionManager.requireElevatedSession(async () => {
+            const data = await send(rebuildButton, 'canary/utility/rebuild-baseline');
+
+            if (data) {
+                baseline.innerHTML = data.baselineHtml;
+                results.innerHTML = '';
+                Craft.cp.displaySuccess(data.message);
+            }
+        });
+    });
+})();
+{% endjs %}

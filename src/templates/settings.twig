@@ -1,0 +1,232 @@
+{% import '_includes/forms' as forms %}
+
+{% set overrides = craft.app.config.getConfigFromFile('canary')|keys %}
+{% macro overrideWarning(key, overrides) %}
+    {%- if key in overrides -%}
+        {{ 'This is being overridden by the `{setting}` setting in `config/canary.php`.'|t('app', { setting: key })|md(inlineOnly=true) }}
+    {%- endif -%}
+{% endmacro %}
+
+{% css %}
+    .canary-baseline {
+        margin-block-end: 24px;
+        padding: 16px 20px;
+        border: 1px solid var(--gray-200);
+        border-inline-start: 4px solid var(--green-600);
+        border-radius: var(--large-border-radius, 5px);
+        background-color: var(--gray-050);
+    }
+    .canary-baseline.is-missing {
+        border-inline-start-color: var(--amber-500);
+    }
+    .canary-baseline h2 {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-block-end: 8px;
+    }
+    .canary-baseline__stats {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px 32px;
+        margin-block: 12px;
+    }
+    .canary-baseline__stats div {
+        display: flex;
+        flex-direction: column;
+    }
+    .canary-baseline__stats strong {
+        font-size: 1.15em;
+    }
+    .canary-baseline__stats span {
+        color: var(--light-text-color, var(--gray-550));
+        font-size: 0.9em;
+    }
+    .canary-baseline code {
+        overflow-wrap: anywhere;
+    }
+{% endcss %}
+
+<div class="canary-baseline{{ not baseline ? ' is-missing' }}">
+    <h2>
+        <span class="status {{ baseline ? 'green' : 'amber' }}" aria-hidden="true"></span>
+        Baseline
+    </h2>
+
+    <p>
+        The baseline is a fingerprint (SHA-256 hash) of every file Canary watches, taken right after a clean deployment.
+        Each scan compares the files on disk against it, and any file that was added, changed or deleted since is reported.
+    </p>
+
+    {% if baseline %}
+        <div class="canary-baseline__stats">
+            <div>
+                <strong>{{ baseline.fileCount|number }}</strong>
+                <span>files fingerprinted</span>
+            </div>
+            <div>
+                <strong>{{ baseline.generatedAt|datetime('short') }}</strong>
+                <span>generated</span>
+            </div>
+        </div>
+        <p class="light">Stored at <code>{{ baseline.path }}</code></p>
+    {% else %}
+        <p class="warning has-icon">
+            <span class="icon" aria-hidden="true"></span>
+            No baseline yet, so scans can’t check your files. Create one on the server after a clean deployment.
+        </p>
+    {% endif %}
+
+    <p>
+        Rebuild the baseline after every deployment, so legitimate changes aren’t reported as issues.
+        Add this as the last step of your deploy script:
+    </p>
+    <p><code>php craft canary/scan --baseline</code></p>
+
+    <p class="light">
+        A baseline date you don’t recognize is a warning sign in itself: someone with access to the server may have rebuilt it to hide their changes.
+    </p>
+</div>
+
+<p class="light">
+    Schedule the scan with cron, e.g. daily at 6am:
+    <code>0 6 * * * cd /path/to/project &amp;&amp; /usr/bin/php craft canary/scan</code>.
+    You can also run it now from <a href="{{ cpUrl('utilities/canary') }}">Utilities → Canary</a>.
+</p>
+
+<hr>
+
+<h2>Report</h2>
+
+{{ forms.autosuggestField({
+    label: 'Alert email',
+    instructions: 'Who receives the report. Separate multiple addresses with commas. An environment variable such as `$CANARY_ALERT_EMAIL` is recommended.',
+    id: 'alertEmail',
+    name: 'alertEmail',
+    value: settings.alertEmail,
+    suggestEnvVars: true,
+    errors: settings.getErrors('alertEmail'),
+    warning: _self.overrideWarning('alertEmail', overrides),
+}) }}
+
+{{ forms.lightswitchField({
+    label: 'Send the daily “all clear”',
+    instructions: 'Email a report on clean runs too, so a missing email tells you the scan stopped running. When off, email only goes out when something is wrong.',
+    id: 'sendAllClear',
+    name: 'sendAllClear',
+    on: settings.sendAllClear,
+    warning: _self.overrideWarning('sendAllClear', overrides),
+}) }}
+
+<hr>
+
+<h2>File integrity</h2>
+
+{{ forms.textareaField({
+    label: 'Scan paths',
+    instructions: 'Directories and files to hash, relative to the project root, one per line. Files listed directly are hashed regardless of extension.',
+    id: 'scanPaths',
+    name: 'scanPaths',
+    value: settings.scanPaths|join("\n"),
+    rows: 6,
+    class: 'code',
+    errors: settings.getErrors('scanPaths'),
+    warning: _self.overrideWarning('scanPaths', overrides),
+}) }}
+
+{{ forms.textareaField({
+    label: 'File extensions',
+    instructions: 'Extensions hashed when walking a directory, one per line.',
+    id: 'fileExtensions',
+    name: 'fileExtensions',
+    value: settings.fileExtensions|join("\n"),
+    rows: 3,
+    class: 'code',
+    errors: settings.getErrors('fileExtensions'),
+    warning: _self.overrideWarning('fileExtensions', overrides),
+}) }}
+
+{{ forms.textareaField({
+    label: 'Exclude paths',
+    instructions: 'Skipped while scanning, one per line. A plain name (`node_modules`) matches any folder with that name; a path with a slash (`web/cpresources`) matches that path only.',
+    id: 'excludePaths',
+    name: 'excludePaths',
+    value: settings.excludePaths|join("\n"),
+    rows: 3,
+    class: 'code',
+    warning: _self.overrideWarning('excludePaths', overrides),
+}) }}
+
+<hr>
+
+<h2>System health</h2>
+
+{{ forms.lightswitchField({
+    label: 'Run system health checks',
+    instructions: 'Look for processes and executables in temp directories, runaway CPU, connections to crypto-mining ports, Redis exposed beyond localhost, and unexpected crontab entries. Requires a Linux server.',
+    id: 'enableSystemChecks',
+    name: 'enableSystemChecks',
+    on: settings.enableSystemChecks,
+    toggle: 'canary-system-settings',
+    warning: _self.overrideWarning('enableSystemChecks', overrides),
+}) }}
+
+<div id="canary-system-settings"{% if not settings.enableSystemChecks %} class="hidden"{% endif %}>
+    {{ forms.textField({
+        label: 'CPU threshold (%)',
+        instructions: 'Report any process using more CPU than this.',
+        id: 'cpuThreshold',
+        name: 'cpuThreshold',
+        value: settings.cpuThreshold,
+        type: 'number',
+        min: 1,
+        max: 100,
+        size: 5,
+        errors: settings.getErrors('cpuThreshold'),
+        warning: _self.overrideWarning('cpuThreshold', overrides),
+    }) }}
+
+    {{ forms.textareaField({
+        label: 'Mining pool ports',
+        instructions: 'Outbound connections to these remote ports are reported, one per line.',
+        id: 'miningPorts',
+        name: 'miningPorts',
+        value: settings.miningPorts|join("\n"),
+        rows: 5,
+        class: 'code',
+        warning: _self.overrideWarning('miningPorts', overrides),
+    }) }}
+
+    {{ forms.lightswitchField({
+        label: 'Check the crontab',
+        instructions: 'Report crontab entries that match none of the allowed patterns, and report when the crontab can’t be read. Turn this off if the scan runs as a user that can’t read the crontab worth checking, such as when the web server and cron run as different users.',
+        id: 'enableCrontabCheck',
+        name: 'enableCrontabCheck',
+        on: settings.enableCrontabCheck,
+        toggle: 'canary-crontab-settings',
+        warning: _self.overrideWarning('enableCrontabCheck', overrides),
+    }) }}
+
+    <div id="canary-crontab-settings"{% if not settings.enableCrontabCheck %} class="hidden"{% endif %}>
+        {{ forms.textField({
+            label: 'Crontab user',
+            instructions: 'Whose crontab to inspect. Leave blank for the user that runs the scan. Reading another user’s crontab usually requires root.',
+            id: 'cronUser',
+            name: 'cronUser',
+            value: settings.cronUser,
+            class: 'code',
+            warning: _self.overrideWarning('cronUser', overrides),
+        }) }}
+
+        {{ forms.textareaField({
+            label: 'Allowed crontab patterns',
+            instructions: 'Crontab lines containing any of these are expected, one per line. Everything else is reported.',
+            id: 'allowedCronPatterns',
+            name: 'allowedCronPatterns',
+            value: settings.allowedCronPatterns|join("\n"),
+            rows: 4,
+            class: 'code',
+            warning: _self.overrideWarning('allowedCronPatterns', overrides),
+        }) }}
+    </div>
+</div>

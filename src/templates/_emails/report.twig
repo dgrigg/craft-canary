@@ -1,0 +1,82 @@
+{%- set dateFormat = 'M j, Y g:i A T' -%}
+{%- macro fileTable(heading, items) -%}
+    {%- if items|length -%}
+        <h2 style="font-size:16px;margin:24px 0 8px;color:#1f2937;">{{ heading }}</h2>
+        <table cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse;">
+            {%- for item in items %}
+                <tr><td style="padding:6px 8px;border-bottom:1px solid #e5e7eb;font-family:Menlo,Consolas,monospace;font-size:13px;color:#374151;word-break:break-all;">{{ item }}</td></tr>
+            {%- endfor %}
+        </table>
+    {%- endif -%}
+{%- endmacro -%}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Canary report</title>
+</head>
+<body style="margin:0;padding:0;background:#f3f4f6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f3f4f6;padding:24px 12px;">
+<tr><td align="center">
+<table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;background:#ffffff;border-radius:8px;padding:32px;">
+<tr><td style="font-size:15px;line-height:1.5;color:#374151;">
+
+{% if result.error %}
+    <h1 style="font-size:22px;margin:0 0 16px;color:#b91c1c;">Canary check error</h1>
+    <p style="margin:0 0 16px;">An error occurred during the file integrity check.</p>
+    <p style="margin:0 0 16px;"><strong>Error:</strong> {{ result.error }}</p>
+
+{% elseif issueCount %}
+    <h1 style="font-size:22px;margin:0 0 16px;color:#b91c1c;">Canary alert</h1>
+    <p style="margin:0 0 16px;">Unauthorized changes have been detected on your server.</p>
+    <div style="background:#fef2f2;border-left:4px solid #dc2626;padding:12px 16px;margin:0 0 8px;">
+        <strong>Issues found:</strong> {{ issueCount }}
+    </div>
+
+    {{ _self.fileTable('New files (potential threat)', result.added) }}
+    {{ _self.fileTable('Modified files', result.modified) }}
+    {{ _self.fileTable('Deleted files', result.deleted) }}
+
+    {% if result.system|length %}
+        <h2 style="font-size:16px;margin:24px 0 8px;color:#1f2937;">System health alerts</h2>
+        <div style="background:#fef2f2;border-left:4px solid #dc2626;padding:12px 16px;margin:0 0 8px;">
+            ⚠️ Server-level threats detected. Investigate immediately.
+        </div>
+        <table cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse;">
+            {%- for alert in result.system %}
+                <tr><td style="padding:6px 8px;border-bottom:1px solid #e5e7eb;font-size:13px;color:#374151;word-break:break-all;">{{ alert }}</td></tr>
+            {%- endfor %}
+        </table>
+    {% endif %}
+
+    <p style="margin:24px 0 8px;"><strong>Action required:</strong> investigate these changes immediately.</p>
+    <p style="margin:0 0 8px;">If the changes are legitimate (after a deployment), run:</p>
+    <pre style="background:#f3f4f6;padding:12px;border-radius:4px;font-size:13px;margin:0 0 16px;">php craft canary/scan --baseline</pre>
+
+{% else %}
+    <h1 style="font-size:22px;margin:0 0 16px;color:#1f2937;">Daily Canary report</h1>
+    <div style="background:#f0fdf4;border-left:4px solid #16a34a;padding:12px 16px;margin:0 0 16px;">
+        <strong>Status:</strong> All clear
+    </div>
+    <p style="margin:0 0 16px;">No unauthorized file changes detected{{ systemChecks ? ' and all system health checks passed' }}.</p>
+{% endif %}
+
+<hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0;">
+
+<p style="margin:0;font-size:13px;color:#6b7280;line-height:1.7;">
+    <strong>Domain:</strong> {{ domain }}<br>
+    <strong>Server:</strong> {{ serverName }}<br>
+    <strong>Checked:</strong> {{ result.checkedAt|date(dateFormat) }}<br>
+    {% if result.baselineDate %}<strong>Baseline:</strong> {{ result.baselineDate|date(dateFormat) }}<br>{% endif %}
+    <strong>Files monitored:</strong> {{ result.fileCount }}
+</p>
+
+<p style="margin:16px 0 0;font-size:13px;color:#6b7280;">{{ systemName }} · Canary</p>
+
+</td></tr>
+</table>
+</td></tr>
+</table>
+</body>
+</html>
