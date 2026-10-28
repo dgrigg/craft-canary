@@ -6,6 +6,28 @@ Canary hashes your project's PHP and Twig files after each deployment, then chec
 
 By default a report goes out every day, including an "all clear" when nothing is wrong. If the email stops arriving, the scan has stopped running.
 
+## Why Canary
+
+Most compromises aren't noisy. The site keeps working, pages load, and nobody notices until a host suspends the account or search rankings collapse. Two common patterns:
+
+### Crypto miners
+
+An attacker gets in through an unpatched plugin, a leaked credential, or an exposed service. They drop a miner binary, start it, and add a crontab entry so it restarts after a reboot or after you kill it. Often a small PHP loader is left in `web/` or an uploads folder so they can get back in.
+
+Nothing on the site changes. Visitors see normal pages, and Craft has no reason to log anything. The only symptoms are a slower server and a higher bill. Canary looks for each piece:
+
+- the binary in a temp directory, and the process running from it
+- a process pinned above the CPU threshold
+- outbound connections to mining pool ports
+- the crontab entry that doesn't match your allowed patterns
+- the PHP loader, as a new file under `web`
+
+### SEO spam in templates
+
+Instead of using your server, some attackers use your search ranking. They edit a Twig template, usually a layout or footer that renders on every page, to add hidden links to casinos, pharmacies or knock-off stores. Many show the spam only to search engine crawlers, checking the user agent, so you see a clean page in your browser while Google indexes the spam. Others add a redirect that only fires for visitors arriving from search results.
+
+Because the change is a single edited file among hundreds, it can sit there for months. Canary hashes every template, so any edit made outside a deploy shows up as a modified file in the next report, whatever it contains. The same applies to injected code in `config`, `modules` or `index.php`.
+
 ## Requirements
 
 - Craft CMS 5.0+

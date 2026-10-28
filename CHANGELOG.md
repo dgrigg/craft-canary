@@ -1,5 +1,10 @@
 # Release Notes for Site Canary
 
+## 1.0.4 - 2026-10-28
+
+- The README now explains how crypto miners and template SEO spam go unnoticed, and which checks catch them.
+- Added `crypto mining` and `seo spam` package keywords.
+
 ## 1.0.3 - 2026-10-27
 
 - Scan notices and "already running" messages now use the Site Canary name.
