@@ -18,6 +18,13 @@ class SystemHealth extends Component
     public array $tempDirs = ['/tmp', '/var/tmp', '/dev/shm'];
 
     /**
+     * Seconds a process must have been running before its CPU use counts.
+     * ps reports %CPU averaged over a process's lifetime, so brand-new
+     * processes (including this scan and the ps it runs) read near 100%.
+     */
+    public int $minProcessAge = 60;
+
+    /**
      * Run every check. Returns alert strings; empty means clean.
      *
      * @return string[]
@@ -73,22 +80,28 @@ class SystemHealth extends Component
     }
 
     /**
-     * Any process above the CPU threshold.
+     * Any process above the CPU threshold, ignoring this scan, its children
+     * and anything younger than $minProcessAge.
      */
     public function checkCpu(): array
     {
         $threshold = Canary::$plugin->getSettings()->cpuThreshold;
+        $self = getmypid();
         $found = [];
 
-        foreach ($this->lines($this->exec('ps aux 2>/dev/null')) as $i => $line) {
-            $cols = preg_split('/\s+/', $line, 11);
+        foreach ($this->lines($this->exec('ps -eo user,pid,ppid,pcpu,etimes,args 2>/dev/null')) as $i => $line) {
+            $cols = preg_split('/\s+/', $line, 6);
 
-            if ($i === 0 || count($cols) < 11 || !is_numeric($cols[2])) {
+            if ($i === 0 || count($cols) < 6 || !is_numeric($cols[3])) {
                 continue;
             }
 
-            if ((float) $cols[2] > $threshold) {
-                $found[] = "{$cols[0]} pid {$cols[1]} {$cols[2]}% {$cols[10]}";
+            if ((int) $cols[1] === $self || (int) $cols[2] === $self || (int) $cols[4] < $this->minProcessAge) {
+                continue;
+            }
+
+            if ((float) $cols[3] > $threshold) {
+                $found[] = "{$cols[0]} pid {$cols[1]} {$cols[3]}% {$cols[5]}";
             }
         }
 
@@ -126,18 +139,32 @@ class SystemHealth extends Component
     }
 
     /**
-     * Redis listening on something other than localhost.
+     * Redis listening on something other than localhost. Every bind address
+     * must be loopback; an empty bind means Redis listens on all interfaces.
      */
     public function checkRedis(): array
     {
         $lines = $this->lines($this->exec('redis-cli config get bind 2>/dev/null'));
-        $bind = end($lines);
 
-        if ($bind && !str_contains($bind, '127.0.0.1')) {
-            return ['Redis is not bound to localhost: ' . $bind];
+        // Anything other than a "bind" reply means redis-cli is missing, Redis is down, or auth is required
+        if (($lines[0] ?? '') !== 'bind') {
+            return [];
         }
 
-        return [];
+        $bind = $lines[1] ?? '';
+
+        if ($bind === '') {
+            return ['Redis has no bind address and is listening on all interfaces'];
+        }
+
+        $exposed = array_filter(preg_split('/\s+/', $bind), function($addr) {
+            // A leading "-" means "skip if unavailable"
+            $addr = ltrim($addr, '-');
+
+            return !($addr === '::1' || $addr === 'localhost' || str_starts_with($addr, '127.'));
+        });
+
+        return $exposed ? ['Redis is not bound to localhost: ' . $bind] : [];
     }
 
     /**

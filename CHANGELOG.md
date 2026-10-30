@@ -1,5 +1,11 @@
 # Release Notes for Site Canary
 
+## 1.0.5 - 2026-10-30
+
+- The CPU check no longer reports the scan itself or the `ps` it runs. Processes running for less than a minute are ignored, since `ps` averages `%CPU` over a process's lifetime and new processes read near 100%.
+- The Redis check now reads each bind address. It alerts on any address that isn't loopback, including `127.0.0.1 0.0.0.0`, which was previously treated as safe. An empty bind is now reported as listening on all interfaces.
+- The Redis check no longer raises a bind alert when Redis requires authentication.
+
 ## 1.0.4 - 2026-10-28
 
 - The README now explains how crypto miners and template SEO spam go unnoticed, and which checks catch them.

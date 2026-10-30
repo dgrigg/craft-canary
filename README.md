@@ -121,9 +121,9 @@ SHA-256 of every file matching the extensions (`php`, `twig`) under the scan pat
 |---|---|
 | Temp processes | A running process's binary is in `/tmp`, `/var/tmp` or `/dev/shm` |
 | Temp executables | An executable file sits at the top level of those directories |
-| CPU | Any process is above the CPU threshold (default 80%) |
+| CPU | Any process running for at least 60 seconds is above the CPU threshold (default 80%). The scan's own processes are ignored |
 | Mining connections | An outbound connection's remote port is a known mining pool port, and the local port isn't 80/443 |
-| Redis | `redis-cli config get bind` doesn't include `127.0.0.1` |
+| Redis | `redis-cli config get bind` is empty or lists any address other than loopback (`127.x.x.x`, `::1`, `localhost`) |
 | Crontab | The cron user's crontab (default: the user running the scan) has a line matching none of the allowed patterns, or exists but can't be read |
 
 Checks whose tools aren't installed (`ss`, `redis-cli`, `crontab`) are skipped quietly. Turn the whole group off with `enableSystemChecks` for shared hosting or non-Linux servers.

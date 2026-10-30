@@ -174,7 +174,7 @@
 <div id="canary-system-settings"{% if not settings.enableSystemChecks %} class="hidden"{% endif %}>
     {{ forms.textField({
         label: 'CPU threshold (%)',
-        instructions: 'Report any process using more CPU than this.',
+        instructions: 'Report any process using more CPU than this. Processes running for less than a minute are ignored.',
         id: 'cpuThreshold',
         name: 'cpuThreshold',
         value: settings.cpuThreshold,
