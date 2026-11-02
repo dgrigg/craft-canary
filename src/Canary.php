@@ -39,7 +39,7 @@ class Canary extends Plugin
 {
     public static Canary $plugin;
 
-    public string $schemaVersion = '1.0.0';
+    public string $schemaVersion = '1.1.0';
     public bool $hasCpSettings = true;
 
     public static function config(): array
@@ -84,6 +84,7 @@ class Canary extends Plugin
         return Craft::$app->getView()->renderTemplate('site-canary/settings', [
             'settings' => $this->getSettings(),
             'baseline' => $this->integrity->getBaselineInfo(),
+            'history' => $this->integrity->getBaselineHistory(),
         ]);
     }
 }

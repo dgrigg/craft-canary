@@ -44,7 +44,8 @@ No unauthorized file changes detected{{ systemChecks ? ' and all system health c
 Domain: {{ domain }}
 Server: {{ serverName }}
 Checked: {{ result.checkedAt|date(dateFormat) }}
-{% if result.baselineDate %}Baseline: {{ result.baselineDate|date(dateFormat) }}
+{% if result.baselineDate %}Baseline: #{{ result.baselineId }}, {{ result.baselineDate|date(dateFormat) }}
+Baseline source: {{ result.baselineSummary }}
 {% endif %}
 Files monitored: {{ result.fileCount }}
 

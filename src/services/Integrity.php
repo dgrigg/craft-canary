@@ -3,7 +3,9 @@
 namespace dgrigg\canary\services;
 
 use Craft;
-use craft\helpers\FileHelper;
+use craft\db\Query;
+use craft\helpers\DateTimeHelper;
+use craft\helpers\Db;
 use craft\helpers\Json;
 use FilesystemIterator;
 use RecursiveDirectoryIterator;
@@ -11,9 +13,14 @@ use RecursiveIteratorIterator;
 use yii\base\Component;
 
 use dgrigg\canary\Canary;
+use dgrigg\canary\errors\BaselineException;
+use dgrigg\canary\migrations\Install;
 
 /**
  * Hashes the monitored files and compares them against a stored baseline.
+ *
+ * Baselines live in the database, so the deploy, cron and every web instance
+ * see the same one, even on hosts with ephemeral or per-instance disks.
  */
 class Integrity extends Component
 {
@@ -23,66 +30,175 @@ class Integrity extends Component
     public ?string $rootPath = null;
 
     /**
-     * Overridable for testing; defaults to storage/canary/baseline.json.
+     * Baselines kept after each rebuild. The newest is the active one; the rest
+     * record who rebuilt it and when.
      */
-    public ?string $baselineFile = null;
+    public int $baselineHistory = 10;
 
     public function init(): void
     {
         parent::init();
         $this->rootPath ??= Craft::getAlias('@root');
         $this->rootPath = rtrim($this->rootPath, '/\\');
-        $this->baselineFile ??= Craft::$app->getPath()->getStoragePath() . '/canary/baseline.json';
     }
 
     /**
      * Hash every monitored file and save the result as the new baseline.
      * Run after every deployment.
+     *
+     * @param string $source `console`, `cp` or `migration`
      */
-    public function createBaseline(): array
+    public function createBaseline(string $source = 'console', ?int $userId = null): array
     {
         $checksums = $this->scanFiles();
+        $generatedAt = new \DateTime();
 
-        $baseline = [
-            'generated_at' => (new \DateTime())->format(DATE_ATOM),
+        Db::insert(Install::BASELINES, [
+            'fileCount' => count($checksums),
+            'checksums' => Json::encode($checksums, JSON_UNESCAPED_SLASHES),
+            'source' => $source,
+            'userId' => $userId,
+            'systemUser' => self::systemUser(),
+            'hostname' => gethostname() ?: null,
+            'dateCreated' => Db::prepareDateForDb($generatedAt),
+        ]);
+
+        $id = (int)Craft::$app->getDb()->getLastInsertID(Install::BASELINES);
+        $this->pruneBaselines();
+
+        return [
+            'id' => $id,
+            'generated_at' => $generatedAt->format(DATE_ATOM),
             'file_count' => count($checksums),
             'checksums' => $checksums,
         ];
-
-        FileHelper::writeToFile($this->baselineFile, Json::encode($baseline, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
-
-        // The baseline is per-server; keep it out of the project's repo
-        $gitignore = dirname($this->baselineFile) . '/.gitignore';
-        if (!is_file($gitignore)) {
-            FileHelper::writeToFile($gitignore, "*\n");
-        }
-
-        return $baseline;
-    }
-
-    public function getBaseline(): ?array
-    {
-        if (!is_file($this->baselineFile)) {
-            return null;
-        }
-
-        $baseline = Json::decodeIfJson(file_get_contents($this->baselineFile));
-
-        return is_array($baseline) && isset($baseline['checksums']) ? $baseline : null;
     }
 
     /**
-     * Baseline date and file count, without the checksums.
+     * The active (newest) baseline, or null when none has been stored.
+     *
+     * @throws BaselineException if the stored checksums can't be decoded
+     */
+    public function getBaseline(): ?array
+    {
+        $row = $this->baselineQuery()
+            ->addSelect(['checksums'])
+            ->one();
+
+        if (!$row) {
+            return null;
+        }
+
+        $checksums = Json::decodeIfJson($row['checksums']);
+
+        if (!is_array($checksums)) {
+            throw new BaselineException("Baseline #{$row['id']} is corrupt; rebuild it.");
+        }
+
+        return [
+            'id' => (int)$row['id'],
+            'generated_at' => DateTimeHelper::toDateTime($row['dateCreated'])->format(DATE_ATOM),
+            'file_count' => (int)$row['fileCount'],
+            'checksums' => $checksums,
+            'info' => $this->formatInfo($row),
+        ];
+    }
+
+    /**
+     * The active baseline's date, file count and origin, without the checksums.
      */
     public function getBaselineInfo(): ?array
     {
-        $baseline = $this->getBaseline();
+        $row = $this->baselineQuery()->one();
 
-        return $baseline ? [
-            'generatedAt' => new \DateTime($baseline['generated_at']),
-            'fileCount' => $baseline['file_count'],
-            'path' => $this->baselineFile,
-        ] : null;
+        return $row ? $this->formatInfo($row) : null;
+    }
+
+    /**
+     * Recent baselines, newest first, without the checksums.
+     */
+    public function getBaselineHistory(int $limit = 10): array
+    {
+        return array_map(
+            fn(array $row) => $this->formatInfo($row),
+            $this->baselineQuery()->limit($limit)->all()
+        );
+    }
+
+    private function baselineQuery(): Query
+    {
+        return (new Query())
+            ->select(['id', 'fileCount', 'source', 'userId', 'systemUser', 'hostname', 'dateCreated'])
+            ->from(Install::BASELINES)
+            // id breaks ties between two rebuilds in the same second
+            ->orderBy(['dateCreated' => SORT_DESC, 'id' => SORT_DESC]);
+    }
+
+    private function formatInfo(array $row): array
+    {
+        $username = $row['userId']
+            ? Craft::$app->getUsers()->getUserById((int)$row['userId'])?->username
+            : null;
+
+        $info = [
+            'id' => (int)$row['id'],
+            'generatedAt' => DateTimeHelper::toDateTime($row['dateCreated']),
+            'fileCount' => (int)$row['fileCount'],
+            'source' => $row['source'],
+            'userId' => $row['userId'] ? (int)$row['userId'] : null,
+            'username' => $username,
+            'systemUser' => $row['systemUser'],
+            'hostname' => $row['hostname'],
+        ];
+        $info['summary'] = self::summarize($info);
+
+        return $info;
+    }
+
+    /**
+     * How a baseline was made, e.g. "Created from the console by forge on web-1".
+     */
+    private static function summarize(array $info): string
+    {
+        $summary = match ($info['source']) {
+            'console' => 'Created from the console' . ($info['systemUser'] ? " by {$info['systemUser']}" : ''),
+            'cp' => 'Rebuilt in the control panel by ' . ($info['username'] ?? ($info['userId'] ? "user #{$info['userId']}" : 'a deleted user')),
+            'migration' => 'Imported from storage/canary/baseline.json when updating to 1.1.0',
+            default => "Created by {$info['source']}",
+        };
+
+        return $summary . ($info['hostname'] ? " on {$info['hostname']}" : '');
+    }
+
+    /**
+     * Keep only the newest $baselineHistory rows.
+     */
+    private function pruneBaselines(): void
+    {
+        $keep = (new Query())
+            ->select(['id'])
+            ->from(Install::BASELINES)
+            ->orderBy(['dateCreated' => SORT_DESC, 'id' => SORT_DESC])
+            ->limit(max(1, $this->baselineHistory))
+            ->column();
+
+        Db::delete(Install::BASELINES, ['not', ['id' => $keep]]);
+    }
+
+    /**
+     * The OS account running this process, e.g. `forge` or `www-data`.
+     */
+    private static function systemUser(): ?string
+    {
+        if (function_exists('posix_geteuid') && function_exists('posix_getpwuid')) {
+            $name = posix_getpwuid(posix_geteuid())['name'] ?? null;
+
+            if ($name) {
+                return $name;
+            }
+        }
+
+        return get_current_user() ?: null;
     }
 
     /**

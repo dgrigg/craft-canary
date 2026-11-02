@@ -66,6 +66,13 @@ class Settings extends Model
     public array $miningPorts = [3333, 4444, 10300, 14444, 45700];
 
     /**
+     * Check that Redis only listens on loopback. Turn off on managed hosts
+     * such as Servd, where Redis is bound to a private container network
+     * you can't change.
+     */
+    public bool $enableRedisCheck = true;
+
+    /**
      * Inspect a crontab for unexpected entries. Turn off when the scan runs as
      * a user that can't read the crontab worth checking.
      */

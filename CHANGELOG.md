@@ -1,5 +1,13 @@
 # Release Notes for Site Canary
 
+## 1.1.0 - 2026-11-02
+
+- The baseline is now stored in the database instead of `storage/canary/baseline.json`, so it works on load-balanced and ephemeral hosts such as Servd, where the deploy, cron and web server don't share a disk. An existing baseline file is imported on update. Run `php craft up` before `php craft site-canary/scan --baseline` in your deploy.
+- Keeps the last 10 baselines, with who rebuilt each one and from where. Shown in the plugin settings.
+- A missing baseline, a corrupt one and missing tables are now reported separately, instead of all as "No baseline file found".
+- The report email now shows the baseline's number and how it was created.
+- Added the `enableRedisCheck` setting, so the Redis check can be turned off on managed hosts such as Servd, where Redis is bound to a private container network and was reported every day.
+
 ## 1.0.5 - 2026-10-30
 
 - The CPU check no longer reports the scan itself or the `ps` it runs. Processes running for less than a minute are ignored, since `ps` averages `%CPU` over a process's lifetime and new processes read near 100%.

@@ -57,10 +57,10 @@ class ScanController extends Controller
     {
         $this->stdout("Generating file integrity baseline...\n");
 
-        $baseline = Canary::$plugin->integrity->createBaseline();
+        $baseline = Canary::$plugin->integrity->createBaseline('console');
 
         $this->stdout("Baseline created with {$baseline['file_count']} files.\n", Console::FG_GREEN);
-        $this->stdout('Stored at: ' . Canary::$plugin->integrity->baselineFile . "\n");
+        $this->stdout("Saved as baseline #{$baseline['id']} (" . (gethostname() ?: 'unknown host') . ")\n");
 
         return ExitCode::OK;
     }

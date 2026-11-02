@@ -27,6 +27,7 @@ return [
     'enableSystemChecks' => true,
     'cpuThreshold' => 80,
     'miningPorts' => [3333, 4444, 10300, 14444, 45700],
+    'enableRedisCheck' => true,
     'enableCrontabCheck' => true,
     'cronUser' => '',
     'allowedCronPatterns' => ['craft', 'artisan', 'composer', 'apt-get'],

@@ -6,6 +6,8 @@ use Craft;
 use yii\base\Component;
 
 use dgrigg\canary\Canary;
+use dgrigg\canary\errors\BaselineException;
+use dgrigg\canary\migrations\Install;
 
 /**
  * Runs a full Canary scan: file integrity plus system health.
@@ -21,6 +23,8 @@ class Scanner extends Component
      *     system: string[],
      *     fileCount: int,
      *     baselineDate: ?\DateTime,
+     *     baselineId: ?int,
+     *     baselineSummary: ?string,
      *     checkedAt: \DateTime,
      * }
      */
@@ -35,13 +39,25 @@ class Scanner extends Component
             'system' => [],
             'fileCount' => 0,
             'baselineDate' => null,
+            'baselineId' => null,
+            'baselineSummary' => null,
             'checkedAt' => new \DateTime(),
         ];
 
-        $baseline = $plugin->integrity->getBaseline();
+        try {
+            $baseline = $plugin->integrity->getBaseline();
+            $result['error'] = $baseline ? null : 'No baseline stored. Run: php craft site-canary/scan --baseline';
+        } catch (BaselineException $e) {
+            $result['error'] = $e->getMessage();
+        } catch (\yii\db\Exception $e) {
+            if (Craft::$app->getDb()->tableExists(Install::BASELINES, true)) {
+                throw $e;
+            }
 
-        if (!$baseline) {
-            $result['error'] = 'No baseline file found. Run: php craft site-canary/scan --baseline';
+            $result['error'] = 'Site Canary tables are missing. Run: php craft up';
+        }
+
+        if ($result['error']) {
             Craft::error($result['error'], 'canary');
 
             return $result;
@@ -49,6 +65,8 @@ class Scanner extends Component
 
         $result = array_merge($result, $plugin->integrity->compare($baseline));
         $result['baselineDate'] = new \DateTime($baseline['generated_at']);
+        $result['baselineId'] = $baseline['id'];
+        $result['baselineSummary'] = $baseline['info']['summary'];
 
         if ($plugin->getSettings()->enableSystemChecks) {
             $result['system'] = $plugin->systemHealth->check();
@@ -60,6 +78,7 @@ class Scanner extends Component
                 'modified' => $result['modified'],
                 'deleted' => $result['deleted'],
                 'system' => $result['system'],
+                'baseline_id' => $baseline['id'],
                 'baseline_date' => $baseline['generated_at'],
             ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES), 'canary');
         } else {

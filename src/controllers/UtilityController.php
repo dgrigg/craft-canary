@@ -86,14 +86,15 @@ class UtilityController extends Controller
             return $this->asFailure('A Site Canary scan is running. Try again when it finishes.');
         }
 
+        $user = Craft::$app->getUser()->getIdentity();
+
         try {
-            $baseline = Canary::$plugin->integrity->createBaseline();
+            $baseline = Canary::$plugin->integrity->createBaseline('cp', $user->id);
         } finally {
             $mutex->release($lockName);
         }
 
-        $user = Craft::$app->getUser()->getIdentity();
-        Craft::warning("Baseline rebuilt from the control panel by {$user->username} (ID {$user->id}): {$baseline['file_count']} files.", 'canary');
+        Craft::warning("Baseline #{$baseline['id']} rebuilt from the control panel by {$user->username} (ID {$user->id}): {$baseline['file_count']} files.", 'canary');
 
         return $this->asJson([
             'message' => "Baseline rebuilt with {$baseline['file_count']} files.",

@@ -67,7 +67,9 @@ Add this as the last step of your deploy script or CI pipeline, after `composer 
 php craft site-canary/scan --baseline
 ```
 
-Without this, every legitimate deploy shows up as modified files in the next report.
+Without this, every legitimate deploy shows up as modified files in the next report. It has to run after `php craft up`, which creates Canary's database table on install and update. Servd's default post-deploy tasks and the usual Forge deploy script already run in that order.
+
+The baseline is stored in the database, so the deploy, the cron job and the control panel all see the same one. That makes Canary work on load-balanced and ephemeral hosts such as Servd and Craft Cloud, where they don't share a disk. The last 10 baselines are kept, each with who rebuilt it and from which host, and they're listed in the plugin settings.
 
 ### 2. Schedule the daily scan
 
@@ -97,13 +99,13 @@ To confirm the entry works, run the same command by hand as that user with `--dr
 cd /var/www/example.com && /usr/bin/php craft site-canary/scan --dry-run
 ```
 
-Runs are locked with Craft's mutex, so overlapping runs are skipped. The crontab check (below) inspects this same user's crontab by default, and the scan's own entry is allowed because it contains `craft`.
+Runs are locked with Craft's mutex, so overlapping runs are skipped. The mutex is file-based by default, so on load-balanced hosts the lock only covers runs on the same instance; that's harmless for a daily job. The crontab check (below) inspects this same user's crontab by default, and the scan's own entry is allowed because it contains `craft`.
 
 ## What gets checked
 
 ### File integrity
 
-SHA-256 of every file matching the extensions (`php`, `twig`) under the scan paths, compared against the baseline in `storage/canary/baseline.json`:
+SHA-256 of every file matching the extensions (`php`, `twig`) under the scan paths, compared against the baseline stored in the database:
 
 | Default scan path | Why |
 |---|---|
@@ -129,6 +131,8 @@ SHA-256 of every file matching the extensions (`php`, `twig`) under the scan pat
 Checks whose tools aren't installed (`ss`, `redis-cli`, `crontab`) are skipped quietly. Turn the whole group off with `enableSystemChecks` for shared hosting or non-Linux servers.
 
 The crontab check reads the crontab of the system account the scan runs as, or of `cronUser` when one is set (which usually requires root). If that crontab exists but can't be read, the scan reports it as an issue rather than passing. A scan run from **Utilities → Site Canary** runs as the web server's PHP user, which is often a different account from the one cron uses. If that makes the check unreliable on your server, turn it off with `enableCrontabCheck` and keep the other system checks.
+
+On managed and containerised hosts such as Servd, Redis runs on a private container network and is bound to `0.0.0.0`, which you can't change and isn't reachable from the internet. The Redis check reports it every day there, so turn it off with `enableRedisCheck`.
 
 ## Configuration
 
@@ -156,6 +160,7 @@ return [
 | `enableSystemChecks` | `true` | Run the server-level checks |
 | `cpuThreshold` | `80` | CPU percentage that triggers an alert |
 | `miningPorts` | `[3333, 4444, 10300, 14444, 45700]` | Remote ports treated as mining pools |
+| `enableRedisCheck` | `true` | Run the Redis bind check |
 | `enableCrontabCheck` | `true` | Run the crontab check |
 | `cronUser` | `''` | Whose crontab to inspect; empty for the user running the scan. Inspecting another user's crontab usually requires root |
 | `allowedCronPatterns` | `['craft', 'artisan', 'composer', 'apt-get']` | Crontab lines containing any of these are expected |
@@ -167,4 +172,5 @@ Everything Canary logs goes to `storage/logs/canary-YYYY-MM-DD.log`, including t
 ## Limitations
 
 - Canary detects changes after the fact; it doesn't block them. Pair it with a WAF and keeping Craft and plugins updated.
-- The baseline lives on the same server it protects. An attacker with write access could regenerate it, though the next report would then show an unexpected baseline date.
+- The baseline is stored in the site's own database. That raises the bar slightly over a file in `storage/`, since an attacker needs database access, but anyone who can run code on the server can read `.env` and get it, so treat it as the same risk. An attacker could rebuild the baseline to hide their changes. The next report would then show an unexpected baseline date and source, and the rebuild history in the plugin settings shows who rebuilt it and from where.
+- On load-balanced or containerised hosts such as Servd, file and system checks inspect whichever instance runs the scan, which may not be the one serving traffic.

@@ -144,6 +144,10 @@ class SystemHealth extends Component
      */
     public function checkRedis(): array
     {
+        if (!Canary::$plugin->getSettings()->enableRedisCheck) {
+            return [];
+        }
+
         $lines = $this->lines($this->exec('redis-cli config get bind 2>/dev/null'));
 
         // Anything other than a "bind" reply means redis-cli is missing, Redis is down, or auth is required

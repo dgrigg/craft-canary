@@ -68,7 +68,8 @@
     <strong>Domain:</strong> {{ domain }}<br>
     <strong>Server:</strong> {{ serverName }}<br>
     <strong>Checked:</strong> {{ result.checkedAt|date(dateFormat) }}<br>
-    {% if result.baselineDate %}<strong>Baseline:</strong> {{ result.baselineDate|date(dateFormat) }}<br>{% endif %}
+    {% if result.baselineDate %}<strong>Baseline:</strong> #{{ result.baselineId }}, {{ result.baselineDate|date(dateFormat) }}<br>
+    <strong>Baseline source:</strong> {{ result.baselineSummary }}<br>{% endif %}
     <strong>Files monitored:</strong> {{ result.fileCount }}
 </p>
 
